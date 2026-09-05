@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+  overscroll-behavior-y: none; /* kill iOS/Android bounce/pull-to-refresh in the field forms */
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+* {
+  -webkit-touch-callout: none;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+/* iOS Safari zooms on focus if inputs are < 16px */
+input, select, textarea {
+  font-size: 16px;
+}
+
+::selection {
+  background: #F5A623;
+  color: #12181F;
+}
+
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@keyframes rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-rise {
+  animation: rise 220ms ease-out;
+}
