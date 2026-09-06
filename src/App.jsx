@@ -6,7 +6,10 @@ import NotFound from './pages/NotFound.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import Reconciliation from './pages/admin/Reconciliation.jsx';
-import QRGenerator from './pages/admin/QRGenerator.jsx';
+import Provisioning from './pages/admin/Provisioning.jsx';
+import Sites from './pages/admin/Sites.jsx';
+import Personnel from './pages/admin/Personnel.jsx';
+import Gate from './pages/admin/Gate.jsx';
 
 export default function App() {
   return (
@@ -18,7 +21,10 @@ export default function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="reconciliation" element={<Reconciliation />} />
-        <Route path="qr-batch" element={<QRGenerator />} />
+        <Route path="provisioning" element={<Provisioning />} />
+        <Route path="sites" element={<Sites />} />
+        <Route path="personnel" element={<Personnel />} />
+        <Route path="gate" element={<Gate />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

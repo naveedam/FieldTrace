@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, QrCode, LogOut, ScanLine } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackagePlus, LogOut, ScanLine, Building2, Users, PackageCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient.js';
 import { Spinner, PrimaryButton, Field, inputClass } from '../../components/ui.jsx';
 import { useToast } from '../../lib/toast.jsx';
@@ -8,7 +8,10 @@ import { useToast } from '../../lib/toast.jsx';
 const NAV = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/reconciliation', label: 'Reconciliation', icon: ClipboardList },
-  { to: '/admin/qr-batch', label: 'QR batch', icon: QrCode }
+  { to: '/admin/sites', label: 'Sites & Spaces', icon: Building2 },
+  { to: '/admin/personnel', label: 'Personnel', icon: Users },
+  { to: '/admin/gate', label: 'Storekeeper Gate', icon: PackageCheck },
+  { to: '/admin/provisioning', label: 'Asset Provisioning', icon: PackagePlus }
 ];
 
 export default function AdminLayout() {
