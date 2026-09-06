@@ -1,36 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { PackagePlus, Printer, MapPin, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { PackagePlus, Printer, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient.js';
 import { useToast } from '../../lib/toast.jsx';
 import { Field, inputClass, AmberButton } from '../../components/ui.jsx';
 import { SkeletonRows } from '../../components/Skeleton.jsx';
-
-const ASSET_CATEGORIES = [
-  { label: 'Task Chair', prefix: 'CHAIR' },
-  { label: 'AV Display', prefix: 'AV' },
-  { label: 'Pod', prefix: 'POD' },
-  { label: 'Meeting Table', prefix: 'TABLE' },
-  { label: 'Standing Desk', prefix: 'DESK' },
-  { label: 'Sofa', prefix: 'SOFA' },
-  { label: 'Projector', prefix: 'PROJ' },
-  { label: 'Access Point', prefix: 'AP' },
-  { label: 'Other', prefix: 'OTHER' }
-];
+import { ASSET_CATEGORIES } from '../../lib/assetCategories.js';
+import TagCard from '../../components/TagCard.jsx';
+import FloorPlanImport from './FloorPlanImport.jsx';
 
 export default function Provisioning() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [sites, setSites] = useState([]);
 
+  async function loadSites() {
+    setLoading(true);
+    const { data } = await supabase.from('ft_locations').select('*').order('name');
+    setSites(data || []);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const { data } = await supabase.from('ft_locations').select('*').order('name');
-      setSites(data || []);
-      setLoading(false);
-    }
-    load();
+    loadSites();
   }, []);
 
   if (loading) return <SkeletonRows rows={4} cols={3} />;
@@ -49,6 +40,7 @@ export default function Provisioning() {
       </div>
 
       <RegisterAndPrint sites={sites} toast={toast} />
+      <FloorPlanImport sites={sites} toast={toast} onSitesChanged={loadSites} />
       <ZoneTagPrinter sites={sites} toast={toast} />
     </div>
   );
@@ -284,18 +276,5 @@ function ZoneTagPrinter({ sites, toast }) {
         )}
       </div>
     </section>
-  );
-}
-
-function TagCard({ title, id, url, sub }) {
-  return (
-    <div className="flex flex-col items-center gap-2 border-2 border-ink bg-white p-4 text-center break-inside-avoid">
-      <p className="text-[10px] font-semibold tracking-wide text-ink-600">{title}</p>
-      <QRCodeSVG value={url} size={120} level="M" fgColor="#12181F" bgColor="#FFFFFF" />
-      <p className="font-mono text-xs font-semibold text-ink">{id}</p>
-      <p className="flex items-center gap-1 text-[10px] text-ink-600">
-        <MapPin size={9} /> {sub}
-      </p>
-    </div>
   );
 }

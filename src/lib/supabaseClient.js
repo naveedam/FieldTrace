@@ -19,6 +19,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 export const INCIDENT_PROOFS_BUCKET = 'ft-incident-proofs';
+export const FLOORPLANS_BUCKET = 'ft-floorplans';
 
 /**
  * Uploads a captured photo (File/Blob) to the public ft-incident-proofs
@@ -38,5 +39,26 @@ export async function uploadIncidentPhoto(file, prefix = 'log') {
   if (error) throw error;
 
   const { data } = supabase.storage.from(INCIDENT_PROOFS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Uploads a rasterized floor plan image (Blob/File — already converted from
+ * PDF to PNG client-side if needed, see lib/pdfRender.js) to the public
+ * ft-floorplans bucket and returns its public URL.
+ */
+export async function uploadFloorPlanImage(file, locationId) {
+  const ext = file.type?.split('/')?.[1] || 'png';
+  const path = `${locationId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await supabase.storage.from(FLOORPLANS_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type || 'image/png'
+  });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(FLOORPLANS_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }

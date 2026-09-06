@@ -8,6 +8,24 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
+      workbox: {
+        // pdfjs (~2.5MB combined) is dynamic-imported only when an admin
+        // uploads a PDF floor plan — see src/pages/admin/FloorPlanImport.jsx.
+        // Excluding it from precache keeps the PWA install lean for field
+        // technicians, who never touch that code path. It's fetched and
+        // runtime-cached the first time it's actually needed instead.
+        globIgnores: ['**/pdf.worker-*.mjs', '**/pdfRender-*.js'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/(pdf\.worker-.*\.mjs|pdfRender-.*\.js)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdf-renderer',
+              expiration: { maxEntries: 4 }
+            }
+          }
+        ]
+      },
       manifest: {
         name: 'FieldTrace',
         short_name: 'FieldTrace',
