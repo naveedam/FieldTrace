@@ -20,6 +20,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export const INCIDENT_PROOFS_BUCKET = 'ft-incident-proofs';
 export const FLOORPLANS_BUCKET = 'ft-floorplans';
+export const SITE_PHOTOS_BUCKET = 'ft-site-photos';
 
 /**
  * Uploads a captured photo (File/Blob) to the public ft-incident-proofs
@@ -60,5 +61,25 @@ export async function uploadFloorPlanImage(file, locationId) {
   if (error) throw error;
 
   const { data } = supabase.storage.from(FLOORPLANS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Uploads a curated before/after handover photo to the public
+ * ft-site-photos bucket and returns its public URL.
+ */
+export async function uploadSitePhoto(file, locationId) {
+  const ext = file.type?.split('/')?.[1] || 'jpg';
+  const path = `${locationId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await supabase.storage.from(SITE_PHOTOS_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type || 'image/jpeg'
+  });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(SITE_PHOTOS_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }

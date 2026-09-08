@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, PackagePlus, LogOut, ScanLine, Building2, Users, PackageCheck } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackagePlus, LogOut, ScanLine, Building2, Users, PackageCheck, Share2 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient.js';
 import { Spinner, PrimaryButton, Field, inputClass } from '../../components/ui.jsx';
 import { useToast } from '../../lib/toast.jsx';
@@ -11,7 +11,8 @@ const NAV = [
   { to: '/admin/sites', label: 'Sites & Spaces', icon: Building2 },
   { to: '/admin/personnel', label: 'Personnel', icon: Users },
   { to: '/admin/gate', label: 'Storekeeper Gate', icon: PackageCheck },
-  { to: '/admin/provisioning', label: 'Asset Provisioning', icon: PackagePlus }
+  { to: '/admin/provisioning', label: 'Asset Provisioning', icon: PackagePlus },
+  { to: '/admin/client-portal', label: 'Client Portal', icon: Share2 }
 ];
 
 export default function AdminLayout() {

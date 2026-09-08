@@ -195,7 +195,61 @@ and asset tags all day never downloads it. If you add more admin-only heavy
 dependencies later, follow the same pattern: dynamic `import()` at the call
 site, not a static import, and exclude the resulting chunk from precache.
 
-## 7. Run
+## 7. Client Portal (migration 005)
+
+`supabase/migration_005_client_portal.sql` adds a read-only, magic-link
+portal you can hand to a tenant or client after a site goes live: a curated
+before/after photo gallery and the asset register (category, make/model,
+status, warranty — deliberately **not** unit cost) for exactly the zones
+you choose to share. Run it after migrations 1–4, same project.
+
+> **Naming note:** same as migration 003 — the "site" table here is
+> `ft_locations`, not a separate `ft_sites`.
+
+**This is the first external-facing surface in the app.** Every other
+external-facing thing here (the zone/asset scan flows) is zero-login and
+safe to be zero-login, because there's nothing sensitive behind a scan
+beyond a work-order form for one zone. A client portal exposes a real asset
+register, so it's gated differently: a long, unguessable, individually
+revocable token (`ft_client_shares.access_token`), not by anyone finding the
+URL pattern. There's still no login for the client — the link itself is the
+credential, consistent with the zero-login philosophy everywhere else in
+this app — but unlike a QR code, it's created and revoked deliberately by
+your team, one share at a time, scoped to specific zones.
+
+**Why zones, not the whole site:** a single site can have multiple tenants
+on different floors (see the seed data — `ZN-KRM1-F3-BAY-A` and
+`ZN-KRM1-F3-MEET-201` belong to Nimbus Analytics, `ZN-KRM1-F2-*` doesn't
+belong to anyone). A share pins an explicit list of `zone_id`s at creation
+time (`ft_client_share_zones`), so Tenant A can never see what's installed
+on Tenant B's floor in the same building, and adding a new zone to the site
+later doesn't silently widen an existing share.
+
+**Flow:**
+- Admin: **Client Portal** tab \u2192 pick a site \u2192 **Create share** \u2192 select the
+  zones to include \u2192 get a link to send the client. **Add photo** to upload
+  curated Before/After shots (a plain file picker, not the field app's
+  forced-camera capture \u2014 these are meant to be professional handover
+  photography, not live evidence).
+- Client: opens `/portal/:token` \u2014 no login, no app. Sees the before/after
+  gallery and the full asset register for their zones, grouped by category,
+  with a **Print / Save as PDF** button for anyone who wants a physical or
+  emailable copy.
+- Revoking a share (the **Revoke** button) is immediate \u2014
+  `ft_get_client_portal` checks `revoked = false` on every request, so a
+  revoked link stops working on the client's very next page load, not
+  eventually.
+
+**Everything routes through one validated RPC.** `ft_get_client_portal(token)`
+is the only way an anonymous visitor reads any of this data \u2014 it's granted
+to `anon`, but it validates the token and scopes every query to that share's
+pinned zones inside the function itself, then returns one composite `jsonb`
+payload (site info, zones, assets, photos). There's no direct anon `SELECT`
+grant on `ft_client_shares`, `ft_assets`, or `ft_site_photos` \u2014 the RPC is
+the only door in, which keeps this consistent with every other write/read
+path in this app that touches anon access.
+
+## 8. Run
 
 ```bash
 npm install
@@ -267,8 +321,9 @@ supabase/
   migration_002_admin.sql      Personnel, site assignments, storekeeper gate
   migration_003_provisioning.sql  Asset Provisioning, inventory ledger, auth↔personnel, site app_url
   migration_004_floorplans.sql    Floor plan import + pin tagging, ft_allocate_and_insert_assets refactor
+  migration_005_client_portal.sql Magic-link client portal, before/after photos
 src/
-  lib/supabaseClient.js       Client + incident-photo + floor-plan upload helpers
+  lib/supabaseClient.js       Client + incident-photo + floor-plan + site-photo upload helpers
   lib/toast.jsx                Toast notification system
   lib/assetCategories.js      Shared category → ID prefix map
   lib/imageDimensions.js      Lightweight image dimension reader (no pdfjs dependency)
@@ -280,6 +335,7 @@ src/
     Scan.jsx                  Dispatches ?type=zone|asset
     ZoneScan.jsx               Workflow A
     AssetScan.jsx               Workflow B (identity card, relocate, defect)
+    ClientPortalView.jsx        Public /portal/:token — before/after + asset register, no login
     admin/
       AdminLayout.jsx           Auth gate + nav shell
       Dashboard.jsx             Burn alerts, consumables tally, tickets
@@ -289,4 +345,5 @@ src/
       Sites.jsx                 Locations (incl. app_url), zone drill-down, quick-add zones
       Personnel.jsx             Staff table, add staff, claim login, active/inactive toggle
       Gate.jsx                  Storekeeper receipt lookup + approve/deduct
+      ClientPortal.jsx          Manage shares + upload before/after photos
 ```
