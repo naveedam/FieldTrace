@@ -32,7 +32,6 @@ export default function Personnel() {
   const [locations, setLocations] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
-  const [claimingId, setClaimingId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -70,15 +69,6 @@ export default function Personnel() {
     if (error) return toast.error(error.message);
     setPersonnel((prev) => prev.map((x) => (x.personnel_id === p.personnel_id ? { ...x, is_active: !x.is_active } : x)));
     toast.success(`${p.full_name} marked ${!p.is_active ? 'active' : 'inactive'}.`);
-  }
-
-  async function claimLogin(p) {
-    setClaimingId(p.personnel_id);
-    const { error } = await supabase.rpc('ft_claim_personnel', { p_personnel_id: p.personnel_id });
-    setClaimingId(null);
-    if (error) return toast.error(error.message);
-    setPersonnel((prev) => prev.map((x) => (x.personnel_id === p.personnel_id ? { ...x, auth_user_id: 'claimed' } : x)));
-    toast.success(`Your login is now linked to ${p.full_name}.`);
   }
 
   if (loading) {
@@ -133,13 +123,9 @@ export default function Personnel() {
                       <CheckCircle2 size={13} /> Linked
                     </span>
                   ) : (
-                    <button
-                      onClick={() => claimLogin(p)}
-                      disabled={claimingId === p.personnel_id}
-                      className="tap-target flex items-center gap-1.5 border-2 border-line px-2.5 py-1.5 text-xs font-semibold text-ink-600"
-                    >
-                      <Link2 size={13} /> This is me
-                    </button>
+                    <span className="flex items-center gap-1.5 text-xs text-ink-600">
+                      <Link2 size={13} /> Pending invite
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-2.5">

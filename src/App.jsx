@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Scan from './pages/Scan.jsx';
 import Landing from './pages/Landing.jsx';
 import NotFound from './pages/NotFound.jsx';
+import Auth from './pages/Auth.jsx';
 import ClientPortalView from './pages/ClientPortalView.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
@@ -17,6 +18,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Auth />} />
       <Route path="/scan" element={<Scan />} />
       <Route path="/portal/:token" element={<ClientPortalView />} />
 

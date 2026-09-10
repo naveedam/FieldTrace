@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { LayoutDashboard, ClipboardList, PackagePlus, LogOut, ScanLine, Building2, Users, PackageCheck, Share2 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient.js';
-import { Spinner, PrimaryButton, Field, inputClass, SectionLabel } from '../../components/ui.jsx';
-import { useToast } from '../../lib/toast.jsx';
+import { Spinner, SectionLabel } from '../../components/ui.jsx';
+import SetupOrganization from './SetupOrganization.jsx';
 
 // Grouped and ordered to match how a site actually moves through a fit-out:
 // set the building up, provision assets during fit-out, hand it to the
@@ -40,12 +40,29 @@ const NAV = NAV_GROUPS.flatMap((g) => g.items);
 
 export default function AdminLayout() {
   const [session, setSession] = useState(undefined); // undefined = loading
+  const [orgName, setOrgName] = useState(undefined); // undefined = checking, null = no org yet, string = linked
+
+  async function checkOrg() {
+    const { data: orgId } = await supabase.rpc('ft_current_org_id');
+    if (!orgId) {
+      setOrgName(null);
+      return;
+    }
+    const { data: org } = await supabase.from('ft_organizations').select('name').eq('org_id', orgId).maybeSingle();
+    setOrgName(org?.name || 'Your organization');
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (session) checkOrg();
+    else setOrgName(undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
   if (session === undefined) {
     return (
@@ -55,7 +72,17 @@ export default function AdminLayout() {
     );
   }
 
-  if (!session) return <LoginGate />;
+  if (!session) return <Navigate to="/login" replace />;
+
+  if (orgName === undefined) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-paper">
+        <Spinner size={24} />
+      </div>
+    );
+  }
+
+  if (orgName === null) return <SetupOrganization onLinked={checkOrg} />;
 
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
@@ -65,7 +92,7 @@ export default function AdminLayout() {
             <ScanLine size={16} className="text-amber" />
           </div>
           <span className="font-bold tracking-tight">FieldTrace</span>
-          <span className="ml-1 hidden text-sm text-line sm:inline">Facility ops</span>
+          <span className="ml-1 hidden text-sm text-line sm:inline">{orgName}</span>
         </div>
         <button
           onClick={() => supabase.auth.signOut()}
@@ -125,49 +152,6 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
-    </div>
-  );
-}
-
-function LoginGate() {
-  const toast = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
-    setLoading(false);
-  }
-
-  return (
-    <div className="flex min-h-dvh items-center justify-center bg-ink px-6">
-      <form onSubmit={handleLogin} className="w-full max-w-sm border-2 border-line bg-paper p-6">
-        <h1 className="text-lg font-bold text-ink">Facility manager sign-in</h1>
-        <p className="mt-1 mb-6 text-sm text-ink-600">
-          Field techs never see this screen — scanning a QR tag takes them straight to the work form.
-        </p>
-        <div className="flex flex-col gap-4">
-          <Field label="Email">
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-          </Field>
-          <Field label="Password">
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-          <PrimaryButton type="submit" loading={loading}>
-            Sign in
-          </PrimaryButton>
-        </div>
-      </form>
     </div>
   );
 }

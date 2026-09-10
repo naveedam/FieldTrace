@@ -347,3 +347,34 @@ src/
       Gate.jsx                  Storekeeper receipt lookup + approve/deduct
       ClientPortal.jsx          Manage shares + upload before/after photos
 ```
+
+## 9. Multi-Tenancy (migration 006)
+
+`supabase/migration_006_multitenancy.sql` adds real organization isolation.
+Run it after migrations 1-5. New: `ft_organizations`, `org_id` on all 15
+data tables, org-scoped RLS, org-scoped RPCs, and two new auth flows:
+`ft_bootstrap_organization` (create a new org) and
+`ft_find_and_claim_by_phone` (join an existing org your admin already added
+you to). Full design rationale is in the migration file's header comment
+and in the chat session this shipped from.
+
+**Before trusting this with a second customer's real data, verify it —
+don't just read the code:**
+1. Sign up as a brand-new user, create an org via the new `/login` -> "Create
+   account" -> Setup screen -> "Create a new organization".
+2. Add a site, a zone, an asset in that new org.
+3. Sign in as your original account. Confirm you do NOT see the new org's
+   site/zone/asset anywhere (Sites & Spaces, Dashboard, Reconciliation,
+   Asset Provisioning zone pickers).
+4. Try hitting an RPC for the other org's data directly from the browser
+   console (e.g. `ft_update_location` with the other org's `location_id`)
+   while signed in as the wrong org -- confirm it raises "Unknown site",
+   not a silent success.
+5. Only after all of that passes clean, treat this as demo/pilot-ready.
+
+**Novaspaces setup for Thursday:** have `mail@novaspaces.com` go to
+`/login` -> Create account -> then the Setup screen -> "Create a new
+organization" -> name it "Novaspaces". That makes them SuperAdmin of their
+own isolated org in the same deployment, same Supabase project. Then:
+Sites & Spaces -> Add Location -> set the site's `app_url` to your shared
+Vercel domain (same one your own org uses) before provisioning anything.
