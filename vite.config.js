@@ -1,23 +1,27 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+
       includeAssets: ['favicon.svg'],
+
       workbox: {
-        // pdfjs (~2.5MB combined) is dynamic-imported only when an admin
-        // uploads a PDF floor plan — see src/pages/admin/FloorPlanImport.jsx.
-        // Excluding it from precache keeps the PWA install lean for field
-        // technicians, who never touch that code path. It's fetched and
-        // runtime-cached the first time it's actually needed instead.
+        // Activate new deployments immediately
+        skipWaiting: true,
+        clientsClaim: true,
+
+        // Keep PDF renderer out of the install bundle
         globIgnores: ['**/pdf.worker-*.mjs', '**/pdfRender-*.js'],
+
         runtimeCaching: [
           {
-            urlPattern: /\/(pdf\.worker-.*\.mjs|pdfRender-.*\.js)$/,
+            urlPattern: /.*(pdf\.worker-.*\.mjs|pdfRender-.*\.js)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'pdf-renderer',
@@ -26,10 +30,11 @@ export default defineConfig({
           }
         ]
       },
+
       manifest: {
         name: 'FieldTrace',
         short_name: 'FieldTrace',
-        description: 'Zone & asset field tracking for fitout operations',
+        description: 'Zone & asset field tracking for fit-out operations',
         theme_color: '#12181F',
         background_color: '#F7F7F5',
         display: 'standalone',
@@ -40,8 +45,9 @@ export default defineConfig({
       }
     })
   ],
+
   server: {
     host: true,
     port: 5173
   }
-});
+})
