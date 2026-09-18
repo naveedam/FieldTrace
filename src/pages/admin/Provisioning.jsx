@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PackagePlus, Printer, AlertTriangle } from 'lucide-react';
+import { PackagePlus, Printer, AlertTriangle, RefreshCw, CheckSquare, Square } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient.js';
 import { useToast } from '../../lib/toast.jsx';
 import { Field, inputClass, AmberButton } from '../../components/ui.jsx';
@@ -41,6 +41,7 @@ export default function Provisioning() {
 
       <RegisterAndPrint sites={sites} toast={toast} />
       <FloorPlanImport sites={sites} toast={toast} onSitesChanged={loadSites} />
+      <ReprintAssetTags sites={sites} toast={toast} />
       <ZoneTagPrinter sites={sites} toast={toast} />
     </div>
   );
@@ -275,6 +276,169 @@ function ZoneTagPrinter({ sites, toast }) {
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+function ReprintAssetTags({ sites, toast }) {
+  const [siteId, setSiteId] = useState('');
+  const [zones, setZones] = useState([]);
+  const [zoneId, setZoneId] = useState(''); // '' = all zones on this site
+  const [assets, setAssets] = useState([]);
+  const [loadingAssets, setLoadingAssets] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  useEffect(() => {
+    if (!siteId) {
+      setZones([]);
+      setZoneId('');
+      setAssets([]);
+      return;
+    }
+    async function loadZones() {
+      const { data } = await supabase.from('ft_zones').select('*').eq('location_id', siteId).order('floor_level');
+      setZones(data || []);
+      setZoneId('');
+    }
+    loadZones();
+  }, [siteId]);
+
+  useEffect(() => {
+    if (!siteId) return;
+    async function loadAssets() {
+      setLoadingAssets(true);
+      const zoneIds = zoneId ? [zoneId] : zones.map((z) => z.zone_id);
+      if (zoneIds.length === 0) {
+        setAssets([]);
+        setLoadingAssets(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('ft_assets')
+        .select('*')
+        .in('current_zone_id', zoneIds)
+        .order('asset_id');
+      setAssets(data || []);
+      setSelectedIds([]);
+      setLoadingAssets(false);
+    }
+    loadAssets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siteId, zoneId, zones.length]);
+
+  const zonesById = Object.fromEntries(zones.map((z) => [z.zone_id, z]));
+  const allSelected = assets.length > 0 && selectedIds.length === assets.length;
+
+  function toggleAsset(id) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function toggleAll() {
+    setSelectedIds(allSelected ? [] : assets.map((a) => a.asset_id));
+  }
+
+  const selectedAssets = assets.filter((a) => selectedIds.includes(a.asset_id));
+
+  function handlePrint() {
+    if (selectedIds.length === 0) return toast.error('Select at least one asset to reprint.');
+    window.print();
+  }
+
+  return (
+    <section>
+      <h3 className="mb-1 font-semibold text-ink">Reprint asset tags</h3>
+      <p className="mb-4 text-xs text-ink-600">
+        For assets already registered — e.g. after fixing a site's App URL — reprint their existing QR tag using the
+        asset's current, stored code. No new records are created here.
+      </p>
+
+      <div className="border-2 border-line bg-white p-5">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Site">
+            <select value={siteId} onChange={(e) => setSiteId(e.target.value)} className={inputClass}>
+              <option value="">Select a site…</option>
+              {sites.map((s) => (
+                <option key={s.location_id} value={s.location_id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Zone" hint="Optional — leave as All to reprint across the whole site">
+            <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className={inputClass} disabled={!siteId}>
+              <option value="">All zones</option>
+              {zones.map((z) => (
+                <option key={z.zone_id} value={z.zone_id}>
+                  {z.floor_level} · {z.zone_type} {z.tenant_name ? `(${z.tenant_name})` : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      {siteId && (
+        <div className="mt-4">
+          {loadingAssets ? (
+            <SkeletonRows rows={3} cols={4} />
+          ) : assets.length === 0 ? (
+            <div className="border-2 border-dashed border-line bg-white px-4 py-8 text-center text-sm text-ink-600">
+              No assets found for this selection.
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 flex items-center justify-between">
+                <button
+                  onClick={toggleAll}
+                  className="tap-target flex items-center gap-2 text-sm font-semibold text-ink-600"
+                >
+                  {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                  {allSelected ? 'Deselect all' : `Select all (${assets.length})`}
+                </button>
+                <AmberButton onClick={handlePrint} className="w-auto px-4" disabled={selectedIds.length === 0}>
+                  <RefreshCw size={15} /> Reprint selected ({selectedIds.length})
+                </AmberButton>
+              </div>
+
+              <div className="max-h-80 overflow-y-auto border-2 border-ink">
+                {assets.map((a, i) => {
+                  const zone = zonesById[a.current_zone_id];
+                  return (
+                    <label
+                      key={a.asset_id}
+                      className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 ${i % 2 ? 'bg-white' : 'bg-paper'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(a.asset_id)}
+                        onChange={() => toggleAsset(a.asset_id)}
+                        className="h-5 w-5 shrink-0 accent-ink"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-xs text-ink-600">{a.asset_id}</p>
+                        <p className="text-sm font-medium text-ink">
+                          {a.category} {a.make_model ? `· ${a.make_model}` : ''}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-xs text-ink-600">
+                        {zone ? `${zone.floor_level} · ${zone.zone_type}` : ''}
+                      </p>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {selectedAssets.length > 0 && (
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 print:grid-cols-3">
+          {selectedAssets.map((a) => (
+            <TagCard key={a.asset_id} title={a.category.toUpperCase()} id={a.asset_id} url={a.qr_code_url} sub="Asset tag" />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
