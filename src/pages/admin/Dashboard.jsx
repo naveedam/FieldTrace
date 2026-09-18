@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Package, TrendingUp, Wrench } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, Package, TrendingUp, Wrench, Building2, ArrowRight, PackagePlus } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient.js';
 import { Spinner, StatusPill } from '../../components/ui.jsx';
 
@@ -68,6 +69,29 @@ export default function Dashboard() {
     );
   }
 
+  if (zones.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 border-2 border-dashed border-line bg-white px-6 py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center border-2 border-ink bg-amber">
+          <Building2 size={24} className="text-ink" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-ink">Nothing to show yet</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-ink-600">
+            Your dashboard fills in once you've set up a site and provisioned some assets. Start by adding your
+            first site and floor.
+          </p>
+        </div>
+        <Link
+          to="/admin/sites"
+          className="tap-target flex items-center gap-2 border-2 border-ink bg-ink px-5 py-2.5 text-sm font-semibold text-paper"
+        >
+          Go to Sites &amp; Spaces <ArrowRight size={15} />
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <section>
@@ -99,38 +123,53 @@ export default function Dashboard() {
 
       <section>
         <SectionHeader icon={Package} title="Live consumables" subtitle="Stock on hand against reorder threshold" />
-        <div className="overflow-hidden border-2 border-ink">
-          <table className="w-full text-sm">
-            <thead className="bg-ink text-paper">
-              <tr>
-                <th className="px-4 py-2.5 text-left font-semibold">Part</th>
-                <th className="px-4 py-2.5 text-left font-semibold">Category</th>
-                <th className="px-4 py-2.5 text-right font-semibold">On hand</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Threshold</th>
-                <th className="px-4 py-2.5 text-left font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parts.map((p, i) => {
-                const low = p.stock_on_hand <= p.min_threshold;
-                return (
-                  <tr key={p.part_id} className={i % 2 ? 'bg-white' : 'bg-paper'}>
-                    <td className="px-4 py-2.5 font-medium text-ink">{p.part_name}</td>
-                    <td className="px-4 py-2.5 text-ink-600">{p.category}</td>
-                    <td className="px-4 py-2.5 text-right font-mono">{p.stock_on_hand}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-ink-600">{p.min_threshold}</td>
-                    <td className="px-4 py-2.5">
-                      <StatusPill status={low ? 'Missing' : 'Active'} />
-                      {low && <span className="ml-2 text-xs text-signal-red">Reorder</span>}
-                    </td>
+        {parts.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 border-2 border-dashed border-line bg-white px-6 py-10 text-center">
+            <PackagePlus size={22} className="text-ink-600" />
+            <div>
+              <p className="text-sm font-medium text-ink">No parts tracked yet</p>
+              <p className="mt-1 text-xs text-ink-600">
+                Spare parts (downlights, drivers, valves, filters) show up here once they're added to a site's
+                inventory in Supabase or via a future parts screen.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden border-2 border-ink">
+              <table className="w-full text-sm">
+                <thead className="bg-ink text-paper">
+                  <tr>
+                    <th className="px-4 py-2.5 text-left font-semibold">Part</th>
+                    <th className="px-4 py-2.5 text-left font-semibold">Category</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">On hand</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Threshold</th>
+                    <th className="px-4 py-2.5 text-left font-semibold">Status</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {lowStock.length > 0 && (
-          <p className="mt-2 text-xs text-signal-red">{lowStock.length} part(s) at or below reorder threshold.</p>
+                </thead>
+                <tbody>
+                  {parts.map((p, i) => {
+                    const low = p.stock_on_hand <= p.min_threshold;
+                    return (
+                      <tr key={p.part_id} className={i % 2 ? 'bg-white' : 'bg-paper'}>
+                        <td className="px-4 py-2.5 font-medium text-ink">{p.part_name}</td>
+                        <td className="px-4 py-2.5 text-ink-600">{p.category}</td>
+                        <td className="px-4 py-2.5 text-right font-mono">{p.stock_on_hand}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-ink-600">{p.min_threshold}</td>
+                        <td className="px-4 py-2.5">
+                          <StatusPill status={low ? 'Missing' : 'Active'} />
+                          {low && <span className="ml-2 text-xs text-signal-red">Reorder</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {lowStock.length > 0 && (
+              <p className="mt-2 text-xs text-signal-red">{lowStock.length} part(s) at or below reorder threshold.</p>
+            )}
+          </>
         )}
       </section>
 
